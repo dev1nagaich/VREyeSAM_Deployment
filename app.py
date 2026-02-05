@@ -48,7 +48,7 @@ def load_model():
     """Load the VREyeSAM model"""
     try:
         # Path handling for both local and Docker environments
-        model_cfg = "segment-anything-2/configs/sam2/sam2_hiera_s.yaml"
+        model_cfg = "configs/sam2/sam2_hiera_s.yaml"
         sam2_checkpoint = "segment-anything-2/checkpoints/sam2_hiera_small.pt"
         fine_tuned_weights = "segment-anything-2/checkpoints/VREyeSAM_uncertainity_best.torch"
         
