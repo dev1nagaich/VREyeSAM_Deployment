@@ -1,0 +1,60 @@
+# Git
+.git
+.gitignore
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+vreyesam_env/
+venv/
+env/
+ENV/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Data and models (downloaded during build)
+VRBiomSegM/
+segment-anything-2/
+
+# Outputs
+*.jpg
+*.png
+*.jpeg
+loss_plots/
+predictions/
+results/
+output/
+VREyeSAM_results/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+docs/`
+*.md
+!README.md
+
+# Training scripts (not needed for deployment)
+Training.py
+Test.py
+Inference.py

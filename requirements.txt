@@ -1,3 +1,39 @@
-altair
-pandas
-streamlit
+# VREyeSAM Requirements - Fixed Version Constraints
+# Compatible with Python 3.11+
+# This version resolves NumPy conflicts with gensim and numba
+
+# Web Interface
+streamlit>=1.28.0,<2.0.0
+
+# Core ML and Deep Learning - COMPATIBLE VERSIONS
+torch==2.3.0
+torchvision==0.18.0
+numpy>=1.22.0,<2.0.0
+
+# Computer Vision
+opencv-python-headless>=4.5.0,<5.0.0
+Pillow>=8.0.0,<11.0.0
+
+# Data Processing and ML
+pandas>=1.3.0,<3.0.0
+scikit-learn>=1.0.0,<2.0.0
+
+# Visualization
+matplotlib>=3.5.0,<4.0.0
+
+# Utility
+tqdm>=4.62.0,<5.0.0
+hydra-core>=1.1.0,<2.0.0
+omegaconf>=2.1.0,<3.0.0
+
+# For downloading model weights
+huggingface-hub>=0.19.0,<1.0.0
+
+# Note: Install PyTorch with CUDA support separately if needed:
+# For CUDA 11.8: pip install torch==2.3.0 torchvision==0.18.0 --index-url https://download.pytorch.org/whl/cu118
+# For CUDA 12.1: pip install torch==2.3.0 torchvision==0.18.0 --index-url https://download.pytorch.org/whl/cu121
+# For CPU only: pip install torch==2.3.0 torchvision==0.18.0 --index-url https://download.pytorch.org/whl/cpu
+
+# SAM2 will be installed separately from git:
+# git clone https://github.com/facebookresearch/segment-anything-2
+# cd segment-anything-2 && pip install -e . && cd ..
