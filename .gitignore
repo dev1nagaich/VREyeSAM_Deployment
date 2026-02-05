@@ -27,7 +27,7 @@ wheels/
 *.egg
 
 # Large external directories
-# segment-anything-2/
+segment-anything-2/
 
 # Model checkpoints and weights
 *.torch
