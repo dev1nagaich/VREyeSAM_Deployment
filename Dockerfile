@@ -31,7 +31,7 @@ RUN mkdir -p segment-anything-2/checkpoints && \
 
 # Download VREyeSAM fine-tuned weights
 RUN pip install --no-cache-dir huggingface-hub && \
-    huggingface-cli download devnagaich/VREyeSAM \
+    hf download devnagaich/VREyeSAM \
     VREyeSAM_uncertainity_best.torch \
     --local-dir segment-anything-2/checkpoints/
 
@@ -45,3 +45,5 @@ ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
 ENV STREAMLIT_SERVER_HEADLESS=true
 
 CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0"]
+
+
