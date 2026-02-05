@@ -168,10 +168,8 @@ def main():
         - Inconsistent lighting conditions
         
         **Model Performance:**
-        - Precision: 0.751
         - Recall: 0.870
         - F1-Score: 0.806
-        - Mean IoU: 0.647
         
         
         """)
