@@ -6,7 +6,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     git \
     wget \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
@@ -29,21 +29,19 @@ RUN mkdir -p segment-anything-2/checkpoints && \
     cd segment-anything-2/checkpoints && \
     wget https://dl.fbaipublicfiles.com/segment_anything_2/072824/sam2_hiera_small.pt
 
-# Download VREyeSAM fine-tuned weights from Hugging Face
+# Download VREyeSAM fine-tuned weights
 RUN pip install --no-cache-dir huggingface-hub && \
-    huggingface-cli download devnagaich/VREyeSAM VREyeSAM_uncertainity_best.torch \
+    huggingface-cli download devnagaich/VREyeSAM \
+    VREyeSAM_uncertainity_best.torch \
     --local-dir segment-anything-2/checkpoints/
 
 # Copy application files
 COPY app.py .
 
-# Expose Streamlit port
 EXPOSE 7860
 
-# Set environment variables
 ENV STREAMLIT_SERVER_PORT=7860
 ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
 ENV STREAMLIT_SERVER_HEADLESS=true
 
-# Run the application
 CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0"]
