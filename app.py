@@ -6,6 +6,7 @@ from PIL import Image
 import io
 import sys
 import os
+import traceback
 
 # Add segment-anything-2 to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "segment-anything-2"))
@@ -46,17 +47,41 @@ st.markdown("""
 def load_model():
     """Load the VREyeSAM model"""
     try:
-        model_cfg = "configs/sam2/sam2_hiera_s.yaml"
+        # Path handling for both local and Docker environments
+        model_cfg = "segment-anything-2/configs/sam2/sam2_hiera_s.yaml"
         sam2_checkpoint = "segment-anything-2/checkpoints/sam2_hiera_small.pt"
         fine_tuned_weights = "segment-anything-2/checkpoints/VREyeSAM_uncertainity_best.torch"
         
-        sam2_model = build_sam2(model_cfg, sam2_checkpoint, device="cuda" if torch.cuda.is_available() else "cpu")
+        # Verify files exist
+        if not os.path.exists(sam2_checkpoint):
+            st.error(f"❌ SAM2 checkpoint not found at: {sam2_checkpoint}")
+            st.info("Current directory: " + os.getcwd())
+            st.info("Directory contents: " + str(os.listdir(".")))
+            return None
+        
+        if not os.path.exists(fine_tuned_weights):
+            st.error(f"❌ VREyeSAM weights not found at: {fine_tuned_weights}")
+            return None
+        
+        # Check file sizes
+        sam2_size = os.path.getsize(sam2_checkpoint) / (1024 * 1024)
+        vresam_size = os.path.getsize(fine_tuned_weights) / (1024 * 1024)
+        st.info(f"📦 SAM2 checkpoint: {sam2_size:.1f} MB")
+        st.info(f"📦 VREyeSAM weights: {vresam_size:.1f} MB")
+        
+        # Load model
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        st.info(f"🖥️ Loading model on: {device.upper()}")
+        
+        sam2_model = build_sam2(model_cfg, sam2_checkpoint, device=device)
         predictor = SAM2ImagePredictor(sam2_model)
-        predictor.model.load_state_dict(torch.load(fine_tuned_weights, map_location="cuda" if torch.cuda.is_available() else "cpu"))
+        predictor.model.load_state_dict(torch.load(fine_tuned_weights, map_location=device))
         
         return predictor
     except Exception as e:
-        st.error(f"Error loading model: {str(e)}")
+        st.error(f"❌ Error loading model: {str(e)}")
+        st.error("Full traceback:")
+        st.code(traceback.format_exc())
         return None
 
 def read_and_resize_image(image):
@@ -132,7 +157,7 @@ def extract_iris_strip(image, binary_mask):
     
     # Create a rectangular strip (normalize height)
     strip_height = 150
-    aspect_ratio = w / h
+    aspect_ratio = w / h if h > 0 else 1
     strip_width = int(strip_height * aspect_ratio)
     
     iris_strip = cv2.resize(iris_region, (strip_width, strip_height))
@@ -168,15 +193,16 @@ def main():
         - Inconsistent lighting conditions
         
         **Model Performance:**
+        - Precision: 0.751
         - Recall: 0.870
         - F1-Score: 0.806
-        
-        
+        - Mean IoU: 0.647
         """)
         
         st.header("Settings")
         show_overlay = st.checkbox("Show Mask Overlay", value=True)
         show_probabilistic = st.checkbox("Show Probabilistic Mask", value=False)
+        show_iris_strip = st.checkbox("Show Iris Strip", value=True)
     
     # Load model
     with st.spinner("Loading VREyeSAM model..."):
@@ -208,113 +234,120 @@ def main():
         # Process button
         if st.button("🔍 Segment Iris", type="primary"):
             with st.spinner("Segmenting iris..."):
-                # Prepare image
-                img_array = read_and_resize_image(image)
-                
-                # Perform segmentation
-                binary_mask, prob_mask = segment_iris(predictor, img_array)
-                
-                # Extract iris strip
-                 ## iris_strip = extract_iris_strip(img_array, binary_mask)
-                
-                with col2:
-                    st.subheader("🎯 Binary Mask")
-                    binary_mask_img = (binary_mask * 255).astype(np.uint8)
-                    st.image(binary_mask_img, use_container_width=True)
-                
-                # Additional results
-                st.markdown("---")
-                st.subheader("📊 Segmentation Results")
-                
-                result_cols = st.columns(3)
-                
-                with result_cols[0]:
-                    if show_overlay:
-                        st.markdown("**Overlay View**")
-                        overlay = overlay_mask_on_image(img_array, binary_mask)
-                        st.image(overlay, use_container_width=True)
-                
-                with result_cols[1]:
-                    if show_probabilistic:
-                        st.markdown("**Probabilistic Mask**")
-                        prob_mask_img = (prob_mask * 255).astype(np.uint8)
-                        st.image(prob_mask_img, use_container_width=True)
-                
-        #        with result_cols[2]:
-        #           if iris_strip is not None:
-        #                st.markdown("**Extracted Iris Strip**")
-        #                st.image(iris_strip, use_container_width=True)
-        #           else:
-        #                st.warning("No iris region detected")
-                
-                # Download options
-                st.markdown("---")
-                st.subheader("💾 Download Results")
-                
-                download_cols = st.columns(3)
-                
-                with download_cols[0]:
-                    # Binary mask download
-                    binary_pil = Image.fromarray(binary_mask_img)
-                    buf = io.BytesIO()
-                    binary_pil.save(buf, format="PNG")
-                    st.download_button(
-                        label="Download Binary Mask",
-                        data=buf.getvalue(),
-                        file_name="binary_mask.png",
-                        mime="image/png"
-                    )
-                
-                with download_cols[1]:
-                    if show_overlay:
-                        # Overlay download
-                        overlay_pil = Image.fromarray(cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB))
+                try:
+                    # Prepare image
+                    img_array = read_and_resize_image(image)
+                    
+                    # Perform segmentation
+                    binary_mask, prob_mask = segment_iris(predictor, img_array)
+                    
+                    # Extract iris strip
+                    iris_strip = extract_iris_strip(img_array, binary_mask) if show_iris_strip else None
+                    
+                    with col2:
+                        st.subheader("🎯 Binary Mask")
+                        binary_mask_img = (binary_mask * 255).astype(np.uint8)
+                        st.image(binary_mask_img, use_container_width=True)
+                    
+                    # Additional results
+                    st.markdown("---")
+                    st.subheader("📊 Segmentation Results")
+                    
+                    result_cols = st.columns(3)
+                    
+                    with result_cols[0]:
+                        if show_overlay:
+                            st.markdown("**Overlay View**")
+                            overlay = overlay_mask_on_image(img_array, binary_mask)
+                            st.image(overlay, use_container_width=True)
+                    
+                    with result_cols[1]:
+                        if show_probabilistic:
+                            st.markdown("**Probabilistic Mask**")
+                            prob_mask_img = (prob_mask * 255).astype(np.uint8)
+                            st.image(prob_mask_img, use_container_width=True)
+                    
+                    with result_cols[2]:
+                        if show_iris_strip and iris_strip is not None:
+                            st.markdown("**Extracted Iris Strip**")
+                            st.image(iris_strip, use_container_width=True)
+                        elif show_iris_strip:
+                            st.warning("No iris region detected")
+                    
+                    # Download options
+                    st.markdown("---")
+                    st.subheader("💾 Download Results")
+                    
+                    download_cols = st.columns(3)
+                    
+                    with download_cols[0]:
+                        # Binary mask download
+                        binary_pil = Image.fromarray(binary_mask_img)
                         buf = io.BytesIO()
-                        overlay_pil.save(buf, format="PNG")
+                        binary_pil.save(buf, format="PNG")
                         st.download_button(
-                            label="Download Overlay",
+                            label="Download Binary Mask",
                             data=buf.getvalue(),
-                            file_name="overlay.png",
+                            file_name="binary_mask.png",
                             mime="image/png"
                         )
+                    
+                    with download_cols[1]:
+                        if show_overlay:
+                            # Overlay download
+                            overlay_pil = Image.fromarray(cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB))
+                            buf = io.BytesIO()
+                            overlay_pil.save(buf, format="PNG")
+                            st.download_button(
+                                label="Download Overlay",
+                                data=buf.getvalue(),
+                                file_name="overlay.png",
+                                mime="image/png"
+                            )
+                    
+                    with download_cols[2]:
+                        if iris_strip is not None:
+                            # Iris strip download
+                            strip_pil = Image.fromarray(cv2.cvtColor(iris_strip, cv2.COLOR_BGR2RGB))
+                            buf = io.BytesIO()
+                            strip_pil.save(buf, format="PNG")
+                            st.download_button(
+                                label="Download Iris Strip",
+                                data=buf.getvalue(),
+                                file_name="iris_strip.png",
+                                mime="image/png"
+                            )
+                    
+                    # Statistics
+                    st.markdown("---")
+                    st.subheader("📈 Segmentation Statistics")
+                    stats_cols = st.columns(4)
+                    
+                    mask_area = np.sum(binary_mask > 0)
+                    total_area = binary_mask.shape[0] * binary_mask.shape[1]
+                    coverage = (mask_area / total_area) * 100
+                    
+                    with stats_cols[0]:
+                        st.metric("Mask Coverage", f"{coverage:.2f}%")
+                    with stats_cols[1]:
+                        st.metric("Image Size", f"{img_array.shape[1]}x{img_array.shape[0]}")
+                    with stats_cols[2]:
+                        st.metric("Mask Area (pixels)", f"{mask_area:,}")
+                    with stats_cols[3]:
+                        if iris_strip is not None:
+                            st.metric("Strip Size", f"{iris_strip.shape[1]}x{iris_strip.shape[0]}")
                 
-        #        with download_cols[2]:
-        #           if iris_strip is not None:
-        #                # Iris strip download
-        #                strip_pil = Image.fromarray(cv2.cvtColor(iris_strip, cv2.COLOR_BGR2RGB))
-        #                buf = io.BytesIO()
-        #                strip_pil.save(buf, format="PNG")
-        #                st.download_button(
-        #                    label="Download Iris Strip",
-        #                    data=buf.getvalue(),
-        #                    file_name="iris_strip.png",
-        #                    mime="image/png"
-        #                )
-                
-                # Statistics
-                st.markdown("---")
-                st.subheader("📈 Segmentation Statistics")
-                stats_cols = st.columns(4)
-                
-                mask_area = np.sum(binary_mask > 0)
-                total_area = binary_mask.shape[0] * binary_mask.shape[1]
-                coverage = (mask_area / total_area) * 100
-                
-                with stats_cols[0]:
-                    st.metric("Mask Coverage", f"{coverage:.2f}%")
-                with stats_cols[1]:
-                    st.metric("Image Size", f"{img_array.shape[1]}x{img_array.shape[0]}")
-                with stats_cols[2]:
-                    st.metric("Mask Area (pixels)", f"{mask_area:,}")
-        #        with stats_cols[3]:
-        #            if iris_strip is not None:
-        #                st.metric("Strip Size", f"{iris_strip.shape[1]}x{iris_strip.shape[0]}")
+                except Exception as e:
+                    st.error(f"❌ Error during segmentation: {str(e)}")
+                    st.error("Full traceback:")
+                    st.code(traceback.format_exc())
 
     # Footer
     st.markdown("---")
     st.markdown("""
     <div style='text-align: center'>
         <p><strong>VREyeSAM</strong> - Virtual Reality Non-Frontal Iris Segmentation</p>
+        <p>Sharma et al., IJCB 2025</p>
         <p>🔗 <a href='https://github.com/GeetanjaliGTZ/VREyeSAM'>GitHub</a> | 
         📧 <a href='mailto:geetanjalisharma546@gmail.com'>Contact</a></p>
     </div>
