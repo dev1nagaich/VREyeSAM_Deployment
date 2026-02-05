@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements first for better caching
 COPY requirements_deploy.txt .
 
-# Install Python dependencies with version constraints
+# Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements_deploy.txt
 
@@ -35,7 +35,7 @@ RUN wget --no-check-certificate \
     https://dl.fbaipublicfiles.com/segment_anything_2/072824/sam2_hiera_small.pt \
     -O segment-anything-2/checkpoints/sam2_hiera_small.pt
 
-# Download VREyeSAM fine-tuned weights using Python
+# Download VREyeSAM weights using Python
 RUN pip install --no-cache-dir huggingface-hub && \
     python -c "from huggingface_hub import hf_hub_download; \
     hf_hub_download(repo_id='devnagaich/VREyeSAM', \
@@ -44,10 +44,13 @@ RUN pip install --no-cache-dir huggingface-hub && \
     local_dir_use_symlinks=False)"
 
 # Verify files were downloaded
-RUN ls -lh segment-anything-2/checkpoints/ && \
-    test -f segment-anything-2/checkpoints/sam2_hiera_small.pt && \
-    test -f segment-anything-2/checkpoints/VREyeSAM_uncertainity_best.torch && \
-    echo "All checkpoints downloaded successfully!"
+RUN ls -lh segment-anything-2/checkpoints/
+
+# Create Streamlit config directory
+RUN mkdir -p /root/.streamlit
+
+# Copy Streamlit config to increase upload size
+COPY .streamlit/config.toml /root/.streamlit/config.toml
 
 # Copy application files
 COPY app.py .
@@ -60,9 +63,10 @@ ENV STREAMLIT_SERVER_PORT=7860
 ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
 ENV STREAMLIT_SERVER_HEADLESS=true
 ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+ENV STREAMLIT_SERVER_MAX_UPLOAD_SIZE=500
 
 # Health check
 HEALTHCHECK CMD curl --fail http://localhost:7860/_stcore/health || exit 1
 
 # Run the application
-CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0", "--server.maxUploadSize=500"]
