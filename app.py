@@ -162,7 +162,7 @@ def main():
     with st.sidebar:
         st.header("About VREyeSAM")
         st.markdown("""
-        **VREyeSAM** is a robust iris segmentation framework designed for images captured under:
+        **VREyeSAM** is a robust non-frontal iris segmentation framework designed for images captured under:
         - Varying gaze directions
         - Partial occlusions
         - Inconsistent lighting conditions
@@ -175,8 +175,8 @@ def main():
         """)
         
         st.header("Settings")
-        show_overlay = st.checkbox("Show mask overlay", value=True)
-        show_probabilistic = st.checkbox("Show probabilistic mask", value=False)
+        show_overlay = st.checkbox("Show Mask Overlay", value=True)
+        show_probabilistic = st.checkbox("Show Probabilistic Mask", value=False)
     
     # Load model
     with st.spinner("Loading VREyeSAM model..."):
