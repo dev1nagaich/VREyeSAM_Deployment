@@ -47,7 +47,8 @@ st.markdown("""
 def load_model():
     """Load the VREyeSAM model"""
     try:
-        # Correct paths as specified
+        # IMPORTANT: Hydra config system searches within sam2 package
+        # Use relative path without "segment-anything-2/" prefix
         model_cfg = "configs/sam2/sam2_hiera_s.yaml"
         sam2_checkpoint = "segment-anything-2/checkpoints/sam2_hiera_small.pt"
         fine_tuned_weights = "segment-anything-2/checkpoints/VREyeSAM_uncertainity_best.torch"
@@ -113,37 +114,6 @@ def segment_iris(predictor, image):
     
     return binary_mask, prob_mask
 
-def extract_iris_strip(image, binary_mask):
-    """Extract iris region and create a rectangular strip"""
-    # Find contours in binary mask
-    contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    if len(contours) == 0:
-        return None
-    
-    # Get the largest contour (assumed to be the iris)
-    largest_contour = max(contours, key=cv2.contourArea)
-    x, y, w, h = cv2.boundingRect(largest_contour)
-    
-    # Add some padding
-    padding = 10
-    x = max(0, x - padding)
-    y = max(0, y - padding)
-    w = min(image.shape[1] - x, w + 2 * padding)
-    h = min(image.shape[0] - y, h + 2 * padding)
-    
-    # Extract the iris region
-    iris_region = image[y:y+h, x:x+w]
-    
-    # Create a rectangular strip (normalize height)
-    strip_height = 150
-    aspect_ratio = w / h if h > 0 else 1
-    strip_width = int(strip_height * aspect_ratio)
-    
-    iris_strip = cv2.resize(iris_region, (strip_width, strip_height))
-    
-    return iris_strip
-
 def overlay_mask_on_image(image, binary_mask, color=(0, 255, 0), alpha=0.5):
     """Overlay binary mask on original image"""
     overlay = image.copy()
@@ -180,7 +150,6 @@ def main():
         st.header("Settings")
         show_overlay = st.checkbox("Show Mask Overlay", value=True)
         show_probabilistic = st.checkbox("Show Probabilistic Mask", value=False)
-        show_iris_strip = st.checkbox("Show Iris Strip", value=True)
     
     # Load model
     with st.spinner("Loading VREyeSAM model..."):
@@ -220,9 +189,6 @@ def main():
                         # Perform segmentation
                         binary_mask, prob_mask = segment_iris(predictor, img_array)
                         
-                        # Extract iris strip
-                        iris_strip = extract_iris_strip(img_array, binary_mask) if show_iris_strip else None
-                        
                         with col2:
                             st.subheader("🎯 Binary Mask")
                             binary_mask_img = (binary_mask * 255).astype(np.uint8)
@@ -232,7 +198,7 @@ def main():
                         st.markdown("---")
                         st.subheader("📊 Segmentation Results")
                         
-                        result_cols = st.columns(3)
+                        result_cols = st.columns(2)
                         
                         with result_cols[0]:
                             if show_overlay:
@@ -246,18 +212,11 @@ def main():
                                 prob_mask_img = (prob_mask * 255).astype(np.uint8)
                                 st.image(prob_mask_img, use_container_width=True)
                         
-                        with result_cols[2]:
-                            if show_iris_strip and iris_strip is not None:
-                                st.markdown("**Extracted Iris Strip**")
-                                st.image(iris_strip, use_container_width=True)
-                            elif show_iris_strip:
-                                st.warning("No iris region detected")
-                        
                         # Download options
                         st.markdown("---")
                         st.subheader("💾 Download Results")
                         
-                        download_cols = st.columns(3)
+                        download_cols = st.columns(2)
                         
                         with download_cols[0]:
                             # Binary mask download
@@ -284,23 +243,10 @@ def main():
                                     mime="image/png"
                                 )
                         
-                        with download_cols[2]:
-                            if iris_strip is not None:
-                                # Iris strip download
-                                strip_pil = Image.fromarray(cv2.cvtColor(iris_strip, cv2.COLOR_BGR2RGB))
-                                buf = io.BytesIO()
-                                strip_pil.save(buf, format="PNG")
-                                st.download_button(
-                                    label="Download Iris Strip",
-                                    data=buf.getvalue(),
-                                    file_name="iris_strip.png",
-                                    mime="image/png"
-                                )
-                        
                         # Statistics
                         st.markdown("---")
                         st.subheader("📈 Segmentation Statistics")
-                        stats_cols = st.columns(4)
+                        stats_cols = st.columns(3)
                         
                         mask_area = np.sum(binary_mask > 0)
                         total_area = binary_mask.shape[0] * binary_mask.shape[1]
@@ -312,9 +258,6 @@ def main():
                             st.metric("Image Size", f"{img_array.shape[1]}x{img_array.shape[0]}")
                         with stats_cols[2]:
                             st.metric("Mask Area (pixels)", f"{mask_area:,}")
-                        with stats_cols[3]:
-                            if iris_strip is not None:
-                                st.metric("Strip Size", f"{iris_strip.shape[1]}x{iris_strip.shape[0]}")
                     
                     except Exception as e:
                         st.error(f"❌ Error during segmentation: {str(e)}")

@@ -21,9 +21,11 @@ COPY requirements_deploy.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements_deploy.txt
 
-# Clone SAM2 repository
+# Clone SAM2 repository at a specific commit that has hieradet
+# Using an older version that's compatible with the VREyeSAM weights
 RUN git clone https://github.com/facebookresearch/segment-anything-2.git && \
     cd segment-anything-2 && \
+    git checkout 7e1596c0b6462eb1d1ba7e1492430fed95023598 && \
     pip install --no-cache-dir -e . && \
     cd ..
 
@@ -35,16 +37,15 @@ RUN wget --no-check-certificate \
     https://dl.fbaipublicfiles.com/segment_anything_2/072824/sam2_hiera_small.pt \
     -O segment-anything-2/checkpoints/sam2_hiera_small.pt
 
-# Download VREyeSAM weights using Python
-RUN pip install --no-cache-dir huggingface-hub && \
-    python -c "from huggingface_hub import hf_hub_download; \
-    hf_hub_download(repo_id='devnagaich/VREyeSAM', \
-    filename='VREyeSAM_uncertainity_best.torch', \
-    local_dir='segment-anything-2/checkpoints', \
-    local_dir_use_symlinks=False)"
+# Download VREyeSAM weights using direct wget from HuggingFace
+RUN wget --no-check-certificate \
+    "https://huggingface.co/devnagaich/VREyeSAM/resolve/main/VREyeSAM_uncertainity_best.torch" \
+    -O segment-anything-2/checkpoints/VREyeSAM_uncertainity_best.torch
 
 # Verify files were downloaded
-RUN ls -lh segment-anything-2/checkpoints/
+RUN ls -lh segment-anything-2/checkpoints/ && \
+    test -f segment-anything-2/checkpoints/sam2_hiera_small.pt && \
+    test -f segment-anything-2/checkpoints/VREyeSAM_uncertainity_best.torch
 
 # Create Streamlit config directory
 RUN mkdir -p /root/.streamlit

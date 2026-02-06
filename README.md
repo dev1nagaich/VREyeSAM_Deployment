@@ -22,7 +22,6 @@ VREyeSAM is a robust iris segmentation framework designed specifically for non-f
 
 - **Upload & Segment**: Upload any non-frontal iris image for instant segmentation
 - **Binary Mask Generation**: Get precise binary segmentation masks
-- **Iris Extraction**: Automatically extract and display the iris region as a rectangular strip
 - **Visualization Options**: View overlay masks and probabilistic confidence maps
 - **Download Results**: Save all segmentation outputs with one click
 
@@ -98,7 +97,7 @@ This project is licensed under the MIT License.
 
 1. **Upload Image**: Click on the upload button and select a non-frontal iris image
 2. **Segment**: Click the "Segment Iris" button to process the image
-3. **View Results**: Explore the binary mask, overlay, and extracted iris strip
+3. **View Results**: Explore the binary mask, overlay, and probabilistic confidence map
 4. **Download**: Save any of the results using the download buttons
 
 ## ⚙️ Model Details
