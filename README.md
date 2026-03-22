@@ -1,13 +1,3 @@
----
-title: VREyeSAM - Iris Segmentation
-emoji: 👁️
-colorFrom: blue
-colorTo: green
-sdk: docker
-pinned: false
-license: mit
----
-
 # VREyeSAM: Virtual Reality Non-Frontal Iris Segmentation
 
 ![VREyeSAM Demo](https://img.shields.io/badge/Status-Active-success)
