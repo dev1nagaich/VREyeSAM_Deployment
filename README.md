@@ -1,8 +1,5 @@
 # VREyeSAM: Virtual Reality Non-Frontal Iris Segmentation
 
-![VREyeSAM Demo](https://img.shields.io/badge/Status-Active-success)
-![Python](https://img.shields.io/badge/Python-3.11+-blue)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red)
 
 ## 🎯 Overview
 
